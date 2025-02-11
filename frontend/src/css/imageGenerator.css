@@ -1,0 +1,215 @@
+.image-generator-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.prompt-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.prompt-input {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.setting-control {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.setting-control input[type="range"] {
+    flex: 1;
+}
+
+.setting-control input[type="number"] {
+    width: 70px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.generate-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.generate-button {
+    padding: 15px;
+    background: linear-gradient(to right, #4dabf7, #3c89dc);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.generate-button:hover {
+    background: linear-gradient(to right, #3c89dc, #2b6cb0);
+    transform: translateY(-2px);
+}
+
+.style-selectors {
+    display: flex;
+    gap: 10px;
+}
+
+.style-select {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.image-preview {
+    aspect-ratio: 1;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ddd;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.action-buttons button {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 20px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.action-buttons button:hover {
+    background: #f8f9fa;
+    border-color: #4dabf7;
+    color: #4dabf7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(77, 171, 247, 0.2);
+}
+
+.action-buttons button:active {
+    transform: translateY(0);
+}
+
+/* Specific button styles */
+.action-buttons button:nth-child(1) { /* Save button */
+    background: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.action-buttons button:nth-child(1):hover {
+    background: #218838;
+    border-color: #218838;
+}
+
+.action-buttons button:nth-child(2) { /* Zip button */
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.action-buttons button:nth-child(2):hover {
+    background: #e0a800;
+    border-color: #e0a800;
+}
+
+.action-buttons button:nth-child(3) { /* Send to img2img */
+    background: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.action-buttons button:nth-child(3):hover {
+    background: #138496;
+    border-color: #138496;
+}
+
+.action-buttons button:nth-child(4) { /* Send to inpaint */
+    background: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+}
+
+.action-buttons button:nth-child(4):hover {
+    background: #5a32a3;
+    border-color: #5a32a3;
+}
+
+.action-buttons button:nth-child(5) { /* Send to extras */
+    background: #fd7e14;
+    border-color: #fd7e14;
+    color: white;
+}
+
+.action-buttons button:nth-child(5):hover {
+    background: #dc6a02;
+    border-color: #dc6a02;
+}
+
+label {
+    font-weight: 500;
+    color: #495057;
+}
+
+input, select {
+    font-size: 0.9rem;
+} 

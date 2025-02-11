@@ -1,0 +1,139 @@
+.gallery-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.gallery-container h1 {
+    color: #2c3e50;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.gallery-item {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.gallery-item:hover {
+    transform: translateY(-5px);
+}
+
+.image-container {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+}
+
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.image-container:hover .image-overlay {
+    opacity: 1;
+}
+
+.image-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.action-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: white;
+}
+
+.action-button.download {
+    background: #3498db;
+}
+
+.action-button.download:hover {
+    background: #2980b9;
+}
+
+.action-button.delete {
+    background: #e74c3c;
+}
+
+.action-button.delete:hover {
+    background: #c0392b;
+}
+
+.image-info {
+    padding: 1rem;
+}
+
+.image-info .prompt {
+    color: #2c3e50;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.image-info .date {
+    color: #7f8c8d;
+    font-size: 0.875rem;
+}
+
+/* Animation for new items */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gallery-item {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .gallery-container {
+        padding: 1rem;
+    }
+
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+} 
