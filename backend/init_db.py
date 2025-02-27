@@ -9,7 +9,7 @@ def init_db():
         # Create sample users
         admin = User(
             username='admin',
-            email='admin@example.com',
+            #email='admin@example.com',
             is_admin=True,
             credits=100
         )
@@ -17,7 +17,7 @@ def init_db():
         
         user = User(
             username='testuser',
-            email='test@example.com',
+            #email='test@example.com',
             credits=10
         )
         user.set_password('test123')

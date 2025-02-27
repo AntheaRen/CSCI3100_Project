@@ -9,6 +9,7 @@ class Config:
     
     # Security configuration
     SECRET_KEY = 'your-secret-key-here'  # Change this in production
+    JWT_SECRET_KEY = "2f7e4c88d5b3a9e1f6c0d4a8b7e2c5f9"  # 32-character random hex
     
     # API configuration
     API_PREFIX = '/api/v1' 
