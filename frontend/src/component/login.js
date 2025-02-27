@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../css/login.css';
 
 export default function Login() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
-        password: '',
-        isAdmin: null,
-        credits: 0
+        password: ''
     });
     const [error, setError] = useState('');
 
@@ -20,47 +19,31 @@ export default function Login() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
         try {
-            // Get users from localStorage
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            console.log('Available users:', users);
-            console.log('Attempting login with:', formData);
-            
-            // Find user
-            const user = users.find(u => 
-                u.username === formData.username && 
-                u.password === formData.password
-            );
-            
-            console.log('Found user:', user);
+            const response = await axios.post('http://127.0.0.1:5000/api/v1/login', formData, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
 
-            if (user) {
-                // Store all user data except password
-                const userInfo = {
-                    username: user.username,
-                    isAdmin: user.isAdmin,
-                    credits: user.credits
-                };
-                localStorage.setItem('currentUser', JSON.stringify(userInfo));
-                navigate('/');
-            } else {
-                setError('Invalid username or password');
-            }
+            const data = response.data;
+            const userInfo = {
+                username: data.username,
+                isAdmin: data.is_admin,
+                credits: data.credits,
+                token: data.access_token
+            };
+            localStorage.setItem('currentUser', JSON.stringify(userInfo));
+            navigate('/');
         } catch (err) {
             console.error('Login error:', err);
-            setError('An error occurred during login');
+            setError(err.response?.data?.error || 'An error occurred during login');
         }
     };
-
-    // Log the current users in localStorage when component mounts
-    React.useEffect(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        console.log('Users in localStorage:', users);
-    }, []);
 
     return (
         <div className="login-container">

@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../css/register.css';
 
 export default function Register() {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
         confirmPassword: ''
     });
+    const [error, setError] = useState('');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -16,15 +20,40 @@ export default function Register() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // TODO: Add your registration logic here
-        console.log('Register attempt with:', formData);
+        setError('');
+
+        // Validate passwords match
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+
+        try {
+            const response = await axios.post('http://127.0.0.1:5000/api/v1/register', {
+                username: formData.username,
+                password: formData.password
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 201) {
+                // Registration successful, redirect to login
+                navigate('/login');
+            }
+        } catch (err) {
+            console.error('Registration error:', err);
+            setError(err.response?.data?.error || 'Registration failed');
+        }
     };
 
     return (
         <div className="register-container">
             <h1>Register</h1>
+            {error && <div className="error-message">{error}</div>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label htmlFor="username">Username:</label>
