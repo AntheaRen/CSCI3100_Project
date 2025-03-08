@@ -1,0 +1,10 @@
+torch
+torchvision
+numpy
+diffusers
+transformers
+spandrel
+flask
+flask-cors
+Flask-SQLAlchemy
+Werkzeug
