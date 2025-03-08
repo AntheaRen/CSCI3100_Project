@@ -1,5 +1,6 @@
 from app import app, db
-from models.user import User
+from modules.user import User
+
 
 def view_users():
     with app.app_context():
@@ -13,5 +14,6 @@ def view_users():
             print(f"Admin: {user.is_admin}")
             print("-" * 50)
 
+
 if __name__ == '__main__':
-    view_users() 
+    view_users()

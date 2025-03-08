@@ -1,5 +1,6 @@
 from app import app, db
-from models.user import User
+from modules.user import User
+
 
 def test_db_operations():
     with app.app_context():
@@ -10,14 +11,14 @@ def test_db_operations():
             db.session.add(user)
             db.session.commit()
             print(f"Created user: {username}")
-            
+
         # Read user
         def get_user(username):
             user = User.query.filter_by(username=username).first()
             if user:
                 print(f"Found user: {user.username}, Credits: {user.credits}")
             return user
-            
+
         # Update user
         def update_credits(username, new_credits):
             user = get_user(username)
@@ -25,7 +26,7 @@ def test_db_operations():
                 user.credits = new_credits
                 db.session.commit()
                 print(f"Updated credits for {username} to {new_credits}")
-                
+
         # Delete user
         def delete_user(username):
             user = get_user(username)
@@ -40,5 +41,6 @@ def test_db_operations():
         update_credits("testuser1", 50)
         delete_user("testuser1")
 
+
 if __name__ == '__main__':
-    test_db_operations() 
+    test_db_operations()
