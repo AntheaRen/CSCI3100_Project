@@ -18,7 +18,24 @@ export default function ImageGenerator() {
     const handleGenerate = (e) => {
         e.preventDefault();
         // TODO: Add your image generation logic here
+        // 在handleGenerate函数中，使用fetch发送POST请求到http://localhost:5000/api/v1/t2i。
+
+
         console.log('Generating with settings:', { prompt, negativePrompt, settings });
+
+        fetch('http://localhost:5000/api/v1/t2i', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt, negativePrompt, settings })
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Generated images:', data);
+                setGeneratedImages(data);
+            })
+            .catch(err => console.error('Error generating images:', err));
     };
 
     const handleSettingChange = (name, value) => {
@@ -149,7 +166,14 @@ export default function ImageGenerator() {
                 </div>
 
                 <div className="image-preview">
-                    {/* Preview image will go here */}
+                    {generatedImages.images && generatedImages.images.map((base64Data, index) => (
+                        <img
+                            key={index}
+                            src={`data:image/png;base64,${base64Data}`}
+                            alt={`Generated ${index}`}
+                            style={{ width: '100%', marginBottom: '10px' }}
+                        />
+                    ))}
                 </div>
 
                 <div className="action-buttons">
