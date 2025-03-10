@@ -174,6 +174,7 @@ def check_if_token_in_blocklist(jwt_header, jwt_payload):
 
 
 @app.route('/api/v1/t2i', methods=['POST'])
+@jwt_required()
 def t2i(output_dir='outputs/t2i/'):
     """
     Text-to-Image API
@@ -190,7 +191,7 @@ def t2i(output_dir='outputs/t2i/'):
         left_credits = get_current_user().credits
 
         if left_credits < required_credits:
-            return jsonify({'error': 'Insufficient credits'}), 403
+            return jsonify({'error': 'Insufficient credits'}), 402
         else:
             user = get_current_user()
             user.credits = left_credits - required_credits
@@ -239,6 +240,7 @@ def t2i(output_dir='outputs/t2i/'):
 
 
 @app.route('/api/v1/upscale', methods=['POST'])
+@jwt_required()
 def upscale():
     """
     Upscale API
@@ -249,7 +251,7 @@ def upscale():
         left_credits = get_current_user().credits
 
         if left_credits < required_credits:
-            return jsonify({'error': 'Insufficient credits'}), 403
+            return jsonify({'error': 'Insufficient credits'}), 402
         else:
             user = get_current_user()
             user.credits = left_credits - required_credits
