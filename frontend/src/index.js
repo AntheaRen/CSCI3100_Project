@@ -10,44 +10,15 @@ import AdminPanel from './component/adminPanel';
 import Gallery from './component/gallery';
 import './css/protectedLayout.css';
 
-// Default users with proper credits initialization
-const defaultUsers = [
-    {
-        username: 'admin',
-        password: 'admin123',
-        isAdmin: true,
-        credits: 100  // Set initial credits for admin
-    },
-    {
-        username: 'user',
-        password: 'user123',
-        isAdmin: false,
-        credits: 10   // Set initial credits for regular user
-    }
-];
 
-// Clear existing users and reinitialize
-localStorage.removeItem('users');
-localStorage.setItem('users', JSON.stringify(defaultUsers));
-console.log('Initialized users:', JSON.parse(localStorage.getItem('users')));
 
 // Helper component for protected routes
 const ProtectedRoute = ({ children }) => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    const isAuthenticated = !!currentUser;
+    console.log('Protected Route - Current User:', currentUser);
     
-    if (!isAuthenticated) {
-        // Redirect to login with the return url
-        return <Navigate to="/login" replace state={{ from: window.location.pathname }} />;
-    }
-    
-    // Check if user still exists in the users list
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userStillExists = users.some(u => u.username === currentUser.username);
-    
-    if (!userStillExists) {
-        // If user was deleted, clear currentUser and redirect to login
-        localStorage.removeItem('currentUser');
+    if (!currentUser) {
+        console.log('No user found, redirecting to login');
         return <Navigate to="/login" replace />;
     }
     
