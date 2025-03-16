@@ -1,41 +1,71 @@
 import React, { useState } from 'react';
 import '../css/imageGenerator.css';
+import axios from 'axios';
 
 export default function ImageGenerator() {
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
     const [settings, setSettings] = useState({
         samplingSteps: 20,
-        width: 512,
-        height: 512,
-        batchCount: 4,
+        width: 832,
+        height: 1216,
+        batchCount: 1,  // 初始值更改为 1 保证安全
         batchSize: 1,
-        cfgScale: 12,
+        cfgScale: 7,
         seed: ''
     });
     const [generatedImages, setGeneratedImages] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleGenerate = (e) => {
+    const getAuthHeader = () => {
+        const token = localStorage.getItem('jwtToken');
+        console.log('token:', token);
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
+    const handleGenerate = async (e) => {
         e.preventDefault();
-        // TODO: Add your image generation logic here
-        // 在handleGenerate函数中，使用fetch发送POST请求到http://localhost:5000/api/v1/t2i。
+        setLoading(true);
+        setError('');
 
+        try {
+            // 构造请求数据
+            const requestData = {
+                prompt,
+                negativePrompt,
+                settings: {
+                    ...settings,
+                    // 确保数值类型正确
+                    samplingSteps: Number(settings.samplingSteps),
+                    width: Number(settings.width),
+                    height: Number(settings.height),
+                    batchCount: Number(settings.batchCount),
+                    batchSize: Number(settings.batchSize),
+                    cfgScale: Number(settings.cfgScale),
+                    seed: settings.seed || undefined
+                }
+            };
 
-        console.log('Generating with settings:', { prompt, negativePrompt, settings });
+            const response = await axios.post(
+                'http://127.0.0.1:5000/api/v1/t2i',
+                requestData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...getAuthHeader()
+                    }
+                }
+            );
 
-        fetch('http://localhost:5000/api/v1/t2i', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ prompt, negativePrompt, settings })
-        })
-            .then(res => res.json())
-            .then(data => {
-                console.log('Generated images:', data);
-                setGeneratedImages(data);
-            })
-            .catch(err => console.error('Error generating images:', err));
+            setGeneratedImages(response.data.images || []);
+
+        } catch (err) {
+            setError(err.response?.data?.error || 'Generation failed');
+            console.error('Generation error:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSettingChange = (name, value) => {
@@ -43,6 +73,17 @@ export default function ImageGenerator() {
             ...prev,
             [name]: value
         }));
+    };
+
+    const handleSave = () => {
+        generatedImages.forEach((base64Data, index) => {
+            const link = document.createElement('a');
+            link.href = `data:image/png;base64,${base64Data}`;
+            link.download = `generated_image_${index + 1}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
     };
 
     return (
@@ -137,6 +178,42 @@ export default function ImageGenerator() {
                     </div>
 
                     <div className="setting-group">
+                        <label>BatchSize</label>
+                        <div className="setting-control">
+                            <input
+                                type="range"
+                                min="1"
+                                max="4"
+                                value={settings.batchSize}
+                                onChange={(e) => handleSettingChange('batchSize', e.target.value)}
+                            />
+                            <input
+                                type="number"
+                                value={settings.batchSize}
+                                onChange={(e) => handleSettingChange('batchSize', e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="setting-group">
+                        <label>BatchCount</label>
+                        <div className="setting-control">
+                            <input
+                                type="range"
+                                min="1"
+                                max="9"
+                                value={settings.batchCount}
+                                onChange={(e) => handleSettingChange('batchCount', e.target.value)}
+                            />
+                            <input
+                                type="number"
+                                value={settings.batchCount}
+                                onChange={(e) => handleSettingChange('batchCount', e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="setting-group">
                         <label>Seed</label>
                         <input
                             type="text"
@@ -166,22 +243,37 @@ export default function ImageGenerator() {
                 </div>
 
                 <div className="image-preview">
-                    {generatedImages.images && generatedImages.images.map((base64Data, index) => (
-                        <img
-                            key={index}
-                            src={`data:image/png;base64,${base64Data}`}
-                            alt={`Generated ${index}`}
-                            style={{ width: '100%', marginBottom: '10px' }}
-                        />
-                    ))}
+                    {loading ? (
+                        <div className="loading-indicator">
+                            <div className="spinner"></div>
+                            <p>Generating...</p>
+                        </div>
+                    ) : generatedImages.length > 0 ? (
+                        generatedImages.map((base64Data, index) => (
+                            <img
+                                key={index}
+                                src={`data:image/png;base64,${base64Data}`}
+                                alt={`Generated ${index + 1}`}
+                                className="generated-image"
+                            />
+                        ))
+                    ) : (
+                        <div className="placeholder">No images generated yet</div>
+                    )}
                 </div>
 
                 <div className="action-buttons">
-                    <button>Save</button>
-                    <button>Zip</button>
+                    <button
+                        onClick={handleSave}
+                        disabled={generatedImages.length === 0}
+                        className="download-button"
+                    >
+                        📥
+                    </button>
+                    {/* <button>Zip</button>
                     <button>Send to img2img</button>
                     <button>Send to inpaint</button>
-                    <button>Send to extras</button>
+                    <button>Send to extras</button> */}
                 </div>
             </div>
         </div>

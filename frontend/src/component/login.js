@@ -38,6 +38,7 @@ export default function Login() {
                 token: data.access_token
             };
             localStorage.setItem('currentUser', JSON.stringify(userInfo));
+            localStorage.setItem('jwtToken', data.access_token); // 必须要有这行
             navigate('/');
         } catch (err) {
             console.error('Login error:', err);

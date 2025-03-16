@@ -1,15 +1,18 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from modules.user import db, User
+from modules.image import OutputImage
 from config import Config
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 from datetime import timedelta
 import os
 import base64
 import io
+import traceback
 from PIL import Image
 import torch
 from typing import List
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -20,7 +23,8 @@ CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:3000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     }
 })
 
@@ -36,6 +40,7 @@ jwt_blocklist = set()
 
 
 def get_current_user():
+    print(f"jwt_identity: {get_jwt_identity()}")
     return User.query.filter_by(username=get_jwt_identity()).first()
 
 
@@ -87,10 +92,11 @@ def register():
 @app.route('/api/v1/login', methods=['POST'])
 def login():
     data = request.get_json()
-    user = get_current_user()
+    user = User.query.filter_by(username=data.get('username')).first()
 
     if user and user.check_password(data['password']):
         access_token = create_access_token(identity=user.username)
+        print(f"[Debug] User {user.username} logged in. Access token: {access_token}")
         return jsonify({
             'username': user.username,
             'credits': user.credits,
@@ -112,7 +118,7 @@ def logout():
 @app.route('/api/v1/users', methods=['GET'])
 @jwt_required()
 def get_users():
-    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    current_user = get_current_user()
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
 
@@ -133,23 +139,23 @@ def get_user(username):
 @app.route('/api/v1/users/<username>/credits', methods=['PUT'])
 @jwt_required()
 def update_credits(username):
-    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    current_user = get_current_user()
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
 
-    user = get_current_user()
-    if user:
-        data = request.get_json()
-        user.credits = data['credits']
-        db.session.commit()
-        return jsonify({'message': 'Credits updated successfully'})
-    return jsonify({'error': 'User not found'}), 404
+    target_user = User.query.filter_by(username=username).first()
+    if not target_user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json()
+    target_user.credits = data['credits']
+    db.session.commit()
 
 
 @app.route('/api/v1/users/<username>', methods=['DELETE'])
 @jwt_required()
 def delete_user(username):
-    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    current_user = get_current_user()
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
 
@@ -173,33 +179,67 @@ def check_if_token_in_blocklist(jwt_header, jwt_payload):
     return jwt_payload["jti"] in jwt_blocklist
 
 
+# @celery.task
+# def t2i_inference(
+#     pipeline,
+#     prompt: str,
+#     negative_prompt: str,
+#     width: int,
+#     height: int,
+#     batch_size: int,
+#     batch_count: int,
+#     guidance_scale: float,
+#     num_inference_steps: int,
+#     seed: int,
+# ):
+#     return pipeline.generate(
+#         prompt=prompt,
+#         negative_prompt=negative_prompt,
+#         width=width,
+#         height=height,
+#         batch_size=batch_size,
+#         batch_count=batch_count,
+#         guidance_scale=guidance_scale,
+#         num_inference_steps=num_inference_steps,
+#         seed=seed
+#     )
+
+
 @app.route('/api/v1/t2i', methods=['POST'])
 @jwt_required()
-def t2i(output_dir='outputs/t2i/'):
+def t2i():
     """
     Text-to-Image API
     Cost: 2 credit per image
     """
     try:
+        # Test code
+        # image_path = r"C:\Users\15070\Desktop\History Courses\yr4 Term2\CSCI3100\CSCI3100_Project\backend\outputs\t2i\0.png"
+        # with open(image_path, 'rb') as f:
+        #     img_str = base64.b64encode(f.read()).decode()
+
+        # return jsonify({'images': [img_str]})
+
         from modules import sd
         data = request.get_json()
         settings = data.get('settings', {})
         batch_size = int(settings.get('batchSize', 1))
         batch_count = int(settings.get('batchCount', 1))
 
+        user = get_current_user()
+
         required_credits = batch_size * batch_count * 2
-        left_credits = get_current_user().credits
+        left_credits = user.credits
 
         if left_credits < required_credits:
             return jsonify({'error': 'Insufficient credits'}), 402
         else:
-            user = get_current_user()
             user.credits = left_credits - required_credits
             db.session.commit()
 
         if sd.pipeline is None:
             sd.pipeline = sd.Pipeline(
-                pretrained_model_name_or_path=sd.DEFAULT_PRETRAINED_MODEL_NAME_OR_PATH,
+                pretrained_model_name_or_path=None,
                 enable_xformers_memory_efficient_attention=False,
                 device="cuda",
                 torch_dtype=torch.float16
@@ -219,12 +259,15 @@ def t2i(output_dir='outputs/t2i/'):
         )
 
         # Save images to output directory
-        os.makedirs(output_dir, exist_ok=True)
         image_paths = []
         for i, image in enumerate(images):
-            image_path = os.path.join(output_dir, f'{i}.png')
-            image.save(image_path)
-            image_paths.append(image_path)
+            output_image = OutputImage(user_id=user.id)
+            # db.session.add(output_image)
+            # db.session.commit()
+            os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
+            image.save(output_image.path)
+            print(f"[Debug] Saved image {output_image.id} to {output_image.path}")
+            image_paths.append(output_image.path)
 
         # Convert images to base64
         image_data = []
@@ -236,6 +279,7 @@ def t2i(output_dir='outputs/t2i/'):
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        traceback.print_exc()
         return jsonify({'error': 'Server error occurred'}), 500
 
 
@@ -264,6 +308,7 @@ def upscale():
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                 verbose=True
             )
+
         data = request.get_json()
         image = Image.open(io.BytesIO(base64.b64decode(data['image'])))
         image = upscaler.upscaler(image)
