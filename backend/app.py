@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from modules.user import db, User
 from modules.image import OutputImage
@@ -14,7 +14,30 @@ import torch
 from typing import List
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path="")
+
+
+# @app.route("/")
+# def serve_frontend():
+#     return send_from_directory("static", "index.html")
+
+
+# @app.route("/<path:filename>")
+# def serve_static(filename):
+#     return send_from_directory("static", filename)
+
+
+# @app.route("/<path:subpath>")
+# def handle_frontend_routes(subpath):
+#     return send_from_directory("static", "index.html")
+
+
+# @app.route("/", defaults={"subpath": ""})
+# @app.route("/<path:subpath>")
+# def serve_any_path(subpath):
+#     return send_from_directory("static", "index.html")
+
+
 app.config.from_object(Config)
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 
@@ -239,7 +262,7 @@ def t2i():
 
         if sd.pipeline is None:
             sd.pipeline = sd.Pipeline(
-                pretrained_model_name_or_path=None,
+                pretrained_model_name_or_path="/root/autodl-tmp/stable-diffusion-webui/models/Stable-diffusion/noob_eps_v1-1.safetensors",
                 enable_xformers_memory_efficient_attention=False,
                 device="cuda",
                 torch_dtype=torch.float16
@@ -323,4 +346,4 @@ def upscale():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
