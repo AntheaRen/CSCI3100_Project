@@ -6,12 +6,12 @@ export default function ImageGenerator() {
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
     const [settings, setSettings] = useState({
-        samplingSteps: 20,
+        samplingSteps: 32,
         width: 832,
         height: 1216,
         batchCount: 1,  // 初始值更改为 1 保证安全
         batchSize: 1,
-        cfgScale: 7,
+        cfgScale: 1.2,
         seed: ''
     });
     const [generatedImages, setGeneratedImages] = useState([]);
@@ -86,6 +86,13 @@ export default function ImageGenerator() {
         });
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            handleGenerate(e);
+        }
+    };
+
     return (
         <div className="image-generator-container">
             <div className="left-panel">
@@ -95,12 +102,14 @@ export default function ImageGenerator() {
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         className="prompt-input"
+                        onKeyDown={handleKeyDown}
                     />
                     <textarea
                         placeholder="Negative prompt (press Ctrl+Enter or Alt+Enter to generate)"
                         value={negativePrompt}
                         onChange={(e) => setNegativePrompt(e.target.value)}
                         className="prompt-input"
+                        onKeyDown={handleKeyDown}
                     />
                 </div>
 

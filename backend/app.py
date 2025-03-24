@@ -11,6 +11,7 @@ import io
 import traceback
 from PIL import Image
 import torch
+import random
 from typing import List
 
 
@@ -260,16 +261,26 @@ def t2i():
             user.credits = left_credits - required_credits
             db.session.commit()
 
-        if sd.pipeline is None:
-            sd.pipeline = sd.Pipeline(
-                pretrained_model_name_or_path="/root/autodl-tmp/stable-diffusion-webui/models/Stable-diffusion/noob_eps_v1-1.safetensors",
-                enable_xformers_memory_efficient_attention=False,
-                device="cuda",
-                torch_dtype=torch.float16
+        if sd.api is None:
+            # sd.api = sd.Pipeline(
+            #     pretrained_model_name_or_path="/root/autodl-tmp/stable-diffusion-webui/models/Stable-diffusion/noob_eps_v1-1.safetensors",
+            #     enable_xformers_memory_efficient_attention=False,
+            #     device="cuda",
+            #     torch_dtype=torch.float16
+            # )
+            sd.api = sd.WebUIAPI(
+                host='connect.yza1.seetacloud.com',
+                port=12007,
+                username='root',
+                password='vs6lNM5wi0aq'
             )
 
         # Generate images
-        images: List[Image.Image] = sd.pipeline.generate(
+        if settings.get('seed'):
+            seed = int(settings['seed'])
+        else:
+            seed = random.randint(0, 2**32 - 1)
+        images: List[Image.Image] = sd.api.generate(
             prompt=data.get('prompt'),
             negative_prompt=data.get('negativePrompt'),
             width=int(settings.get('width', 512)),
@@ -278,7 +289,7 @@ def t2i():
             batch_count=batch_count,
             guidance_scale=float(settings.get('cfgScale', 7.0)),
             num_inference_steps=int(settings.get('samplingSteps', 20)),
-            seed=int(settings.get('seed', 42) or 42)
+            seed=seed
         )
 
         # Save images to output directory
@@ -289,7 +300,7 @@ def t2i():
             # db.session.commit()
             os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
             image.save(output_image.path)
-            print(f"[Debug] Saved image {output_image.id} to {output_image.path}")
+            print(f"Saved image {output_image.id} to {output_image.path}")
             image_paths.append(output_image.path)
 
         # Convert images to base64
