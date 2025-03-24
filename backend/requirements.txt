@@ -11,3 +11,6 @@ diffusers
 xformers
 transformers
 spandrel
+huggingface-hub
+sshtunnel
+webuiapi
