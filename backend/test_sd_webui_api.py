@@ -5,7 +5,7 @@ import webuiapi
 ssh_username = 'root'
 ssh_host = 'connect.yza1.seetacloud.com'
 ssh_port = 12007
-ssh_password = ''
+ssh_password = 'vs6lNM5wi0aq'
 local_port = 6006
 remote_host = '127.0.0.1'
 remote_port = 6006
@@ -20,7 +20,6 @@ tunnel = sshtunnel.SSHTunnelForwarder(
 tunnel.start()
 assert tunnel.is_active, f"SSH tunnel is not active."
 
-api = webuiapi.WebUIApi()
 api = webuiapi.WebUIApi(host='127.0.0.1', port=6006)
 
 image = api.txt2img(

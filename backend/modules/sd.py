@@ -123,8 +123,8 @@ class WebUIAPI(ImageGenerationAPI):
 
     def __init__(
         self,
-        host: str = "",
-        port: int = 6006,
+        host: str,
+        port: int,
         username: str = "root",
         password: str = "",
     ):

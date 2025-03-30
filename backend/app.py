@@ -272,7 +272,7 @@ def t2i():
                 host='connect.yza1.seetacloud.com',
                 port=12007,
                 username='root',
-                password='vs6lNM5wi0aq'
+                password='vs6lNM5wi0aq',
             )
 
         # Generate images
