@@ -1,5 +1,7 @@
-from app import app, db
+from app import app
+from modules.database import db
 from modules.user import User
+from modules.image import OutputImage
 
 
 def init_db():
@@ -28,7 +30,7 @@ def init_db():
         db.session.add(user)
         db.session.commit()
 
-        print("Database initialized with sample users!")
+        print("Database initialized with tables for users and images!")
 
 
 if __name__ == '__main__':
