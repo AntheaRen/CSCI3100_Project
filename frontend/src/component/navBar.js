@@ -38,6 +38,7 @@ export default function NavBar() {
                     <Link to="/" className="nav-link">Home</Link>
                     <Link to="/generator" className="nav-link">Generate</Link>
                     <Link to="/gallery" className="nav-link">Gallery</Link>
+                    <Link to="/upscale" className="nav-link">Upscale</Link>
                     {currentUser?.isAdmin && (
                         <Link to="/admin" className="nav-link admin-link">Admin Panel</Link>
                     )}

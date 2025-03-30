@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from modules.user import db, User
+from modules.database import db
+from modules.user import User
 from modules.image import OutputImage
 from config import Config
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -13,6 +14,7 @@ from PIL import Image
 import torch
 import random
 from typing import List
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__, static_folder='static', static_url_path="")
@@ -145,6 +147,8 @@ def get_users():
     current_user = get_current_user()
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users])
 
 
 @app.route('/api/v1/users/<username>', methods=['GET'])
@@ -183,12 +187,62 @@ def delete_user(username):
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
 
-    user = get_current_user()
-    if user:
-        db.session.delete(user)
-        db.session.commit()
-        return jsonify({'message': 'User deleted successfully'})
-    return jsonify({'error': 'User not found'}), 404
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'User deleted successfully'})
+
+
+@app.route('/api/v1/users/<username>', methods=['PUT'])
+@jwt_required()
+def update_user(username):
+    current_user = get_current_user()
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized access'}), 403
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    username = user.username
+    credits = user.credits
+    password = user.password_hash
+
+    data = request.get_json()
+    if 'username' in data:
+        username = data['username']
+    if 'credits' in data:
+        credits = data['credits']
+    if 'password' in data:
+        password = generate_password_hash(data['password'])
+
+    user.username = username
+    user.credits = credits
+    user.password_hash = password
+
+    db.session.commit()
+    return jsonify({'message': 'User updated successfully'})
+
+
+@app.route('/api/v1/users', methods=['POST'])
+@jwt_required()
+def create_user():
+    current_user = get_current_user()
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized access'}), 403
+
+    data = request.get_json()
+    user = User(
+        username=data['username'],
+        credits=data['credits'],
+        password_hash=generate_password_hash(data['password'])
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'message': 'User created successfully'})
 
 
 @app.route('/api/v1/test', methods=['GET'])
@@ -239,6 +293,7 @@ def t2i():
     try:
         # Test code
         # image_path = r"C:\Users\15070\Desktop\History Courses\yr4 Term2\CSCI3100\CSCI3100_Project\backend\outputs\t2i\0.png"
+        # image_path = r"/Users/jiahui/Desktop/CS/csci3100/3100_Project/backend/outputs/t2i/1.png"
         # with open(image_path, 'rb') as f:
         #     img_str = base64.b64encode(f.read()).decode()
 
@@ -257,10 +312,11 @@ def t2i():
 
         if left_credits < required_credits:
             return jsonify({'error': 'Insufficient credits'}), 402
-        else:
-            user.credits = left_credits - required_credits
-            db.session.commit()
 
+        user.credits = left_credits - required_credits
+        db.session.commit()
+
+        from modules import sd
         if sd.api is None:
             # sd.api = sd.Pipeline(
             #     pretrained_model_name_or_path="/root/autodl-tmp/stable-diffusion-webui/models/Stable-diffusion/noob_eps_v1-1.safetensors",
@@ -292,24 +348,32 @@ def t2i():
             seed=seed
         )
 
-        # Save images to output directory
-        image_paths = []
-        for i, image in enumerate(images):
-            output_image = OutputImage(user_id=user.id)
-            # db.session.add(output_image)
-            # db.session.commit()
-            os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
-            image.save(output_image.path)
-            print(f"Saved image {output_image.id} to {output_image.path}")
-            image_paths.append(output_image.path)
-
-        # Convert images to base64
+        # Save images and store in database
         image_data = []
-        for image_path in image_paths:
-            with open(image_path, 'rb') as f:
+        for i, image in enumerate(images):
+            # Create database entry
+            output_image = OutputImage(
+                user_id=user.id,
+                prompt=data.get('prompt'),
+                negative_prompt=data.get('negativePrompt')
+            )
+            db.session.add(output_image)
+            db.session.commit()
+
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
+
+            # Save image file
+            image.save(output_image.path)
+
+            # Convert to base64 for response
+            with open(output_image.path, 'rb') as f:
                 image_data.append(base64.b64encode(f.read()).decode())
 
-        return jsonify({'images': image_data})
+        return jsonify({
+            'images': image_data,
+            'image_ids': [img.id for img in output_image]
+        })
 
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -354,6 +418,79 @@ def upscale():
     except Exception as e:
         print(f"Error: {str(e)}")
         return jsonify({'error': 'Server error occurred'}), 500
+
+
+@app.route('/api/v1/verify-token', methods=['GET'])
+@jwt_required()
+def verify_token():
+    try:
+        # If @jwt_required() passes, token is valid
+        return jsonify({'valid': True})
+    except:
+        return jsonify({'valid': False}), 401
+
+
+@app.route('/api/v1/images', methods=['GET'])
+@jwt_required()
+def get_user_images():
+    """Get all images for the current user"""
+    user = get_current_user()
+    images = OutputImage.query.filter_by(user_id=user.id).order_by(OutputImage.created_at.desc()).all()
+
+    return jsonify({
+        'images': [{
+            'id': image.id,
+            'path': image.path,
+            'prompt': image.prompt,
+            'created_at': image.created_at.isoformat(),
+        } for image in images]
+    })
+
+
+@app.route('/api/v1/images/<int:image_id>', methods=['GET'])
+@jwt_required()
+def get_image(image_id):
+    """Get a specific image"""
+    user = get_current_user()
+    image = OutputImage.query.filter_by(id=image_id, user_id=user.id).first()
+
+    if not image:
+        return jsonify({'error': 'Image not found'}), 404
+
+    with open(image.path, 'rb') as f:
+        image_data = base64.b64encode(f.read()).decode()
+
+    return jsonify({
+        'id': image.id,
+        'path': image.path,
+        'prompt': image.prompt,
+        'negative_prompt': image.negative_prompt,
+        'created_at': image.created_at.isoformat(),
+        'image_data': image_data
+    })
+
+
+@app.route('/api/v1/images/<int:image_id>', methods=['DELETE'])
+@jwt_required()
+def delete_image(image_id):
+    """Delete a specific image"""
+    user = get_current_user()
+    image = OutputImage.query.filter_by(id=image_id, user_id=user.id).first()
+
+    if not image:
+        return jsonify({'error': 'Image not found'}), 404
+
+    # Delete the file
+    try:
+        os.remove(image.path)
+    except OSError:
+        pass  # File might not exist
+
+    # Delete from database
+    db.session.delete(image)
+    db.session.commit()
+
+    return jsonify({'message': 'Image deleted successfully'})
 
 
 if __name__ == '__main__':
