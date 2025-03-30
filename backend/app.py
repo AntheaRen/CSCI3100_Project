@@ -350,6 +350,7 @@ def t2i():
 
         # Save images and store in database
         image_data = []
+        image_ids = []
         for i, image in enumerate(images):
             # Create database entry
             output_image = OutputImage(
@@ -357,8 +358,8 @@ def t2i():
                 prompt=data.get('prompt'),
                 negative_prompt=data.get('negativePrompt')
             )
-            db.session.add(output_image)
-            db.session.commit()
+            # db.session.add(output_image)
+            # db.session.commit()
 
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
@@ -369,10 +370,11 @@ def t2i():
             # Convert to base64 for response
             with open(output_image.path, 'rb') as f:
                 image_data.append(base64.b64encode(f.read()).decode())
+            image_ids.append(output_image.id)
 
         return jsonify({
             'images': image_data,
-            'image_ids': [img.id for img in output_image]
+            'image_ids': image_ids,
         })
 
     except Exception as e:

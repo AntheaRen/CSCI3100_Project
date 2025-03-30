@@ -33,10 +33,10 @@ class Upscaler(object):
     ):
         if not os.path.isfile(pretrained_model_name_or_path):
             raise FileNotFoundError(f"file not found: {pretrained_model_name_or_path}")
-        print(f"loading model from {pretrained_model_name_or_path}", disable=not verbose)
+        print(f"Loading model from {pretrained_model_name_or_path}", disable=not verbose)
         tic = time.time()
         model = ModelLoader().load_from_file(pretrained_model_name_or_path)
-        print(f"loaded model in {time.time() - tic:'.2f'} seconds", disable=not verbose)
+        print(f"Loaded model in {time.time() - tic:'.2f'} seconds", disable=not verbose)
 
         model.to(device)
         model.eval()

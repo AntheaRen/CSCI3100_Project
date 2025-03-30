@@ -4,6 +4,7 @@ import gc
 from abc import ABC, abstractmethod
 from PIL import Image
 from typing import List
+from . import logging
 
 
 class ImageGenerationAPI(ABC):
@@ -25,7 +26,7 @@ class StableDiffusionXLPipelineAPI(object):
         torch_dtype: torch.dtype = torch.float16,
         use_lpw: bool = True,
     ):
-        print(f"Loading Stable Diffusion XL pipeline...")
+        logging.info(f"Loading Stable Diffusion XL pipeline...")
         from diffusers import StableDiffusionXLPipeline
         # Download checkpoint
         from huggingface_hub import hf_hub_download
@@ -47,7 +48,7 @@ class StableDiffusionXLPipelineAPI(object):
             ).to(device, dtype=torch_dtype)
             if enable_xformers_memory_efficient_attention:
                 self.pipe.enable_xformers_memory_efficient_attention()
-                print(f"Enabled XFormers memory efficient attention")
+                logging.info(f"Enabled XFormers memory efficient attention")
         else:
             from .utils import sdxl_model_utils, sdxl_eval_utils
             from .models.sdxl_lpw_pipeline import SDXLStableDiffusionLongPromptWeightingPipeline
@@ -72,7 +73,7 @@ class StableDiffusionXLPipelineAPI(object):
             if enable_xformers_memory_efficient_attention:
                 self.pipe.unet.enable_xformers_memory_efficient_attention()
                 self.pipe.vae.enable_xformers_memory_efficient_attention()
-                print(f"Enabled XFormers memory efficient attention")
+                logging.info(f"Enabled XFormers memory efficient attention")
 
     @property
     def device(self):
@@ -102,6 +103,7 @@ class StableDiffusionXLPipelineAPI(object):
         seed: int = 42,
     ) -> List[Image.Image]:
         from .utils import sdxl_eval_utils
+        logging.info(f"Generating images with Stable Diffusion XL pipeline...")
         self.pipe.scheduler = sdxl_eval_utils.get_sampler(sampler)
         images = self.pipe.__call__(
             prompt=[prompt]*batch_size,
@@ -128,7 +130,7 @@ class WebUIAPI(ImageGenerationAPI):
         username: str = "root",
         password: str = "",
     ):
-        print(f"Connecting to WebUI API at {host}:{port}...")
+        logging.info(f"Connecting to WebUI API at {host}:{port}...")
         self.host = host
         self.port = port
         self.username = username
@@ -152,8 +154,13 @@ class WebUIAPI(ImageGenerationAPI):
 
         self.tunnel.start()
         assert self.tunnel.is_active, f"SSH tunnel is not active."
+        logging.info(f"SSH tunnel is active. Local port: {self.tunnel.local_bind_port}")
+        logging.info(f"Connecting to WebUI API at {self.host}:{self.port}...")
 
         self.api = webuiapi.WebUIApi(host='127.0.0.1', port=6006)
+
+        # assert self.api.is_alive(), f"WebUI API is not alive."
+        logging.info(f"WebUI API connected.")
 
     def generate(
         self,
@@ -169,7 +176,8 @@ class WebUIAPI(ImageGenerationAPI):
         seed: int = 42,
     ) -> List[Image.Image]:
         images = []
-        for bc in range(batch_count):
+        logging.info(f"Generating images with WebUI API...")
+        for bc in logging.tqdm(range(batch_count), desc="Batch Count", leave=False, disable=batch_count <= 1):
             batch_imgs = self.api.txt2img(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
