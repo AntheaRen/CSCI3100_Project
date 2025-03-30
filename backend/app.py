@@ -355,22 +355,24 @@ def t2i():
             # Create database entry
             output_image = OutputImage(
                 user_id=user.id,
+                filename=f'image_{i}.png',  # Add filename
                 prompt=data.get('prompt'),
                 negative_prompt=data.get('negativePrompt')
             )
-            # db.session.add(output_image)
-            # db.session.commit()
+            # Uncomment these lines to save to database
+            db.session.add(output_image)
+            db.session.commit()  # This will generate the ID
 
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
-
+            
             # Save image file
             image.save(output_image.path)
-
+            
             # Convert to base64 for response
             with open(output_image.path, 'rb') as f:
                 image_data.append(base64.b64encode(f.read()).decode())
-            image_ids.append(output_image.id)
+            image_ids.append(output_image.id)  # Now id will be available
 
         return jsonify({
             'images': image_data,
