@@ -30,13 +30,11 @@ export default function ImageGenerator() {
         setError('');
 
         try {
-            // 构造请求数据
             const requestData = {
                 prompt,
                 negativePrompt,
                 settings: {
                     ...settings,
-                    // 确保数值类型正确
                     samplingSteps: Number(settings.samplingSteps),
                     width: Number(settings.width),
                     height: Number(settings.height),

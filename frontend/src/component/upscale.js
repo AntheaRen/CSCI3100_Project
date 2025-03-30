@@ -9,6 +9,12 @@ export default function Upscale() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const getAuthHeader = () => {
+        const token = localStorage.getItem('jwtToken');
+        console.log('token:', token);
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
     const handleImageUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -32,10 +38,19 @@ export default function Upscale() {
 
         try {
             const base64Image = inputImage.split(',')[1];
-            const response = await axios.post('http://localhost:5000/api/v1/upscale', {
-                image: base64Image,
-                ratio: upscaleRatio
-            });
+            const response = await axios.post(
+                'http://localhost:5000/api/v1/upscale',
+                {
+                    image: base64Image,
+                    ratio: upscaleRatio
+                },
+                { // 第三个参数是配置对象
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...getAuthHeader(),
+                    }
+                }
+            );
 
             if (response.data.image) {
                 setUpscaledImage(`data:image/png;base64,${response.data.image}`);
@@ -84,8 +99,8 @@ export default function Upscale() {
             <div className="controls">
                 <div className="ratio-control">
                     <label>Upscale Ratio:</label>
-                    <select 
-                        value={upscaleRatio} 
+                    <select
+                        value={upscaleRatio}
                         onChange={(e) => setUpscaleRatio(Number(e.target.value))}
                     >
                         <option value={2}>2x</option>
@@ -93,8 +108,8 @@ export default function Upscale() {
                     </select>
                 </div>
 
-                <button 
-                    onClick={handleUpscale} 
+                <button
+                    onClick={handleUpscale}
                     disabled={!inputImage || loading}
                     className="upscale-button"
                 >

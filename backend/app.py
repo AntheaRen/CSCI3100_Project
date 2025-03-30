@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from modules import sd
 from modules.database import db
 from modules.user import User
 from modules.image import OutputImage
+from modules import logging
 from config import Config
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 from datetime import timedelta
@@ -15,7 +17,6 @@ import torch
 import random
 from typing import List
 from werkzeug.security import generate_password_hash, check_password_hash
-
 
 app = Flask(__name__, static_folder='static', static_url_path="")
 
@@ -66,7 +67,7 @@ jwt_blocklist = set()
 
 
 def get_current_user():
-    print(f"jwt_identity: {get_jwt_identity()}")
+    logging.info(f"Current user JWT identity: {get_jwt_identity()}")
     return User.query.filter_by(username=get_jwt_identity()).first()
 
 
@@ -110,7 +111,7 @@ def register():
         }), 201
 
     except Exception as e:
-        print(f"Error: {str(e)}")  # For debugging
+        logging.error(f"Error: {str(e)}")  # For debugging
         db.session.rollback()
         return jsonify({'error': 'Server error occurred'}), 500
 
@@ -122,7 +123,7 @@ def login():
 
     if user and user.check_password(data['password']):
         access_token = create_access_token(identity=user.username)
-        print(f"[Debug] User {user.username} logged in. Access token: {access_token}")
+        logging.info(f"User {user.username} logged in. Access token: {access_token}")
         return jsonify({
             'username': user.username,
             'credits': user.credits,
@@ -282,6 +283,16 @@ def check_if_token_in_blocklist(jwt_header, jwt_payload):
 #         seed=seed
 #     )
 
+def init_sd_api():
+    if sd.api is None:
+        sd.api = sd.WebUIAPI(
+            host='connect.yza1.seetacloud.com',
+            port=12007,
+            username='root',
+            password='vs6lNM5wi0aq',
+        )
+    return sd.api
+
 
 @app.route('/api/v1/t2i', methods=['POST'])
 @jwt_required()
@@ -299,7 +310,6 @@ def t2i():
 
         # return jsonify({'images': [img_str]})
 
-        from modules import sd
         data = request.get_json()
         settings = data.get('settings', {})
         batch_size = int(settings.get('batchSize', 1))
@@ -316,27 +326,14 @@ def t2i():
         user.credits = left_credits - required_credits
         db.session.commit()
 
-        from modules import sd
-        if sd.api is None:
-            # sd.api = sd.Pipeline(
-            #     pretrained_model_name_or_path="/root/autodl-tmp/stable-diffusion-webui/models/Stable-diffusion/noob_eps_v1-1.safetensors",
-            #     enable_xformers_memory_efficient_attention=False,
-            #     device="cuda",
-            #     torch_dtype=torch.float16
-            # )
-            sd.api = sd.WebUIAPI(
-                host='connect.yza1.seetacloud.com',
-                port=12007,
-                username='root',
-                password='vs6lNM5wi0aq',
-            )
+        init_sd_api()
 
         # Generate images
         if settings.get('seed'):
             seed = int(settings['seed'])
         else:
             seed = random.randint(0, 2**32 - 1)
-        images: List[Image.Image] = sd.api.generate(
+        images: List[Image.Image] = sd.api.txt2img(
             prompt=data.get('prompt'),
             negative_prompt=data.get('negativePrompt'),
             width=int(settings.get('width', 512)),
@@ -378,7 +375,7 @@ def t2i():
         })
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logging.error(f"Error: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': 'Server error occurred'}), 500
 
@@ -401,24 +398,45 @@ def upscale():
             user.credits = left_credits - required_credits
             db.session.commit()
 
-        from modules import upscaler
-        if upscaler.upscaler is None:
-            upscaler.upscaler = upscaler.Upscaler.from_single_file(
-                pretrained_model_name_or_path=upscaler.DEFAULT_PRETRAINED_MODEL_NAME_OR_PATH,
-                device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-                verbose=True
-            )
+        # from modules import upscaler
+        # if upscaler.upscaler is None:
+        #     upscaler.upscaler = upscaler.Upscaler.from_single_file(
+        #         pretrained_model_name_or_path=upscaler.DEFAULT_PRETRAINED_MODEL_NAME_OR_PATH,
+        #         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        #         verbose=True
+        #     )
+
+        # data = request.get_json()
+        # image = Image.open(io.BytesIO(base64.b64decode(data['image'])))
+        # image = upscaler.upscaler(image)
+        # buffered = io.BytesIO()
+        # image[0].save(buffered, format="PNG")
+        # img_str = base64.b64encode(buffered.getvalue()).decode()
+        # return jsonify({'image': img_str})
+
+        init_sd_api()
 
         data = request.get_json()
-        image = Image.open(io.BytesIO(base64.b64decode(data['image'])))
-        image = upscaler.upscaler(image)
+        settings = data.get('settings', {})
+        input_image_data = data.get('image')
+        ratio = float(settings.get('ratio', 2.0))
+
+        input_image = Image.open(io.BytesIO(base64.b64decode(input_image_data))).convert("RGB")
+
+        # Upscale image
+        image = sd.api.upscale(
+            image=input_image,
+            ratio=ratio,
+        )
+
+        # Use image.save
         buffered = io.BytesIO()
-        image[0].save(buffered, format="PNG")
+        image.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
         return jsonify({'image': img_str})
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logging.error(f"Error: {str(e)}")
         return jsonify({'error': 'Server error occurred'}), 500
 
 

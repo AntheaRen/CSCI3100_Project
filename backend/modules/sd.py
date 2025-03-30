@@ -9,7 +9,7 @@ from . import logging
 
 class ImageGenerationAPI(ABC):
     @abstractmethod
-    def generate(self, prompt: str, **kwargs) -> List[Image.Image]:
+    def txt2img(self, prompt: str, **kwargs) -> List[Image.Image]:
         pass
 
 
@@ -162,7 +162,7 @@ class WebUIAPI(ImageGenerationAPI):
         # assert self.api.is_alive(), f"WebUI API is not alive."
         logging.info(f"WebUI API connected.")
 
-    def generate(
+    def txt2img(
         self,
         prompt: str,
         negative_prompt: str = None,
@@ -192,5 +192,19 @@ class WebUIAPI(ImageGenerationAPI):
             images.extend(batch_imgs)
         return images
 
+    def upscale(
+        self,
+        image: Image.Image,
+        ratio: float = 2.0,
+    ):
+        import webuiapi
+        logging.info(f"Upscaling image with WebUI API...")
+        upscaled_image = self.api.extra_single_image(
+            image=image,
+            upscaler_1=webuiapi.Upscaler.ESRGAN_4x,
+            upscaling_resize=ratio,
+        ).image
+        return upscaled_image
 
-api: ImageGenerationAPI = None
+
+api: WebUIAPI = None
