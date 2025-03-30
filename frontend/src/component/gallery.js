@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import '../css/gallery.css';
 
+//os.path.join("database", "images", str(self.user_id), f"{self.id}.png")
+
 export default function Gallery() {
     // Example images array - replace with your actual images data
     const [images] = useState([

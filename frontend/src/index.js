@@ -1,5 +1,5 @@
 import ReactDOM from 'react-dom/client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Register from './component/register';
 import Login from './component/login';
@@ -8,15 +8,38 @@ import ImageGenerator from './component/imageGenerator';
 import Home from './component/home';
 import AdminPanel from './component/adminPanel';
 import Gallery from './component/gallery';
+import Upscale from './component/upscale';
 import './css/protectedLayout.css';
-
-
+import axios from 'axios';
 
 // Helper component for protected routes
 const ProtectedRoute = ({ children }) => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     console.log('Protected Route - Current User:', currentUser);
     
+    useEffect(() => {
+        const verifyToken = async () => {
+            try {
+                const response = await axios.get('http://localhost:5000/api/v1/verify-token', {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser?.token}`
+                    }
+                });
+                if (!response.data.valid) {
+                    localStorage.clear();
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        };
+
+        if (currentUser?.token) {
+            verifyToken();
+        }
+    }, []);
+
     if (!currentUser) {
         console.log('No user found, redirecting to login');
         return <Navigate to="/login" replace />;
@@ -55,6 +78,7 @@ const App = () => {
                     <Route path="home" element={<Home />} />
                     <Route path="generator" element={<ImageGenerator />} />
                     <Route path="gallery" element={<Gallery />} />
+                    <Route path="upscale" element={<Upscale />} />
                     
                     {/* Admin only route */}
                     <Route path="admin" element={

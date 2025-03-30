@@ -13,6 +13,7 @@ from PIL import Image
 import torch
 import random
 from typing import List
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__, static_folder='static', static_url_path="")
@@ -145,6 +146,8 @@ def get_users():
     current_user = get_current_user()
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users])
 
 
 @app.route('/api/v1/users/<username>', methods=['GET'])
@@ -183,13 +186,62 @@ def delete_user(username):
     if not current_user.is_admin:
         return jsonify({'error': 'Unauthorized access'}), 403
 
-    user = get_current_user()
-    if user:
-        db.session.delete(user)
-        db.session.commit()
-        return jsonify({'message': 'User deleted successfully'})
-    return jsonify({'error': 'User not found'}), 404
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
 
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'User deleted successfully'})
+
+
+@app.route('/api/v1/users/<username>', methods=['PUT'])
+@jwt_required()
+def update_user(username):
+    current_user = get_current_user()
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized access'}), 403
+    
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    username = user.username
+    credits = user.credits
+    password = user.password_hash
+    
+    data = request.get_json()
+    if 'username' in data:
+        username = data['username']
+    if 'credits' in data:
+        credits = data['credits']
+    if 'password' in data:
+        password = generate_password_hash(data['password'])
+
+    user.username = username
+    user.credits = credits
+    user.password_hash = password
+        
+    db.session.commit()
+    return jsonify({'message': 'User updated successfully'})
+
+
+@app.route('/api/v1/users', methods=['POST'])
+@jwt_required()
+def create_user():
+    current_user = get_current_user()
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized access'}), 403
+    
+    data = request.get_json()
+    user = User(
+        username=data['username'],
+        credits=data['credits'],
+        password_hash=generate_password_hash(data['password'])
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'message': 'User created successfully'})
 
 @app.route('/api/v1/test', methods=['GET'])
 def test():
@@ -239,10 +291,11 @@ def t2i():
     try:
         # Test code
         # image_path = r"C:\Users\15070\Desktop\History Courses\yr4 Term2\CSCI3100\CSCI3100_Project\backend\outputs\t2i\0.png"
-        # with open(image_path, 'rb') as f:
-        #     img_str = base64.b64encode(f.read()).decode()
+        image_path = r"/Users/jiahui/Desktop/CS/csci3100/3100_Project/backend/outputs/t2i/1.png"
+        with open(image_path, 'rb') as f:
+            img_str = base64.b64encode(f.read()).decode()
 
-        # return jsonify({'images': [img_str]})
+        return jsonify({'images': [img_str]})
 
         from modules import sd
         data = request.get_json()
@@ -354,6 +407,16 @@ def upscale():
     except Exception as e:
         print(f"Error: {str(e)}")
         return jsonify({'error': 'Server error occurred'}), 500
+
+
+@app.route('/api/v1/verify-token', methods=['GET'])
+@jwt_required()
+def verify_token():
+    try:
+        # If @jwt_required() passes, token is valid
+        return jsonify({'valid': True})
+    except:
+        return jsonify({'valid': False}), 401
 
 
 if __name__ == '__main__':
