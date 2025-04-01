@@ -32,6 +32,7 @@ export default function Login() {
 
             const data = response.data;
             const userInfo = {
+                id: data.id,
                 username: data.username,
                 isAdmin: data.is_admin,
                 credits: data.credits,

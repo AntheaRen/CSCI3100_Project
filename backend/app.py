@@ -17,7 +17,7 @@ import torch
 import random
 from typing import List
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from datetime import datetime
 app = Flask(__name__, static_folder='static', static_url_path="")
 
 
@@ -125,6 +125,7 @@ def login():
         access_token = create_access_token(identity=user.username)
         logging.info(f"User {user.username} logged in. Access token: {access_token}")
         return jsonify({
+            'id': user.id,
             'username': user.username,
             'credits': user.credits,
             'is_admin': user.is_admin,
@@ -353,6 +354,7 @@ def t2i():
             output_image = OutputImage(
                 user_id=user.id,
                 filename=f'image_{i}.png',  # Add filename
+                created_at=datetime.now(),
                 prompt=data.get('prompt'),
                 negative_prompt=data.get('negativePrompt')
             )
@@ -452,6 +454,7 @@ def verify_token():
         return jsonify({'valid': False}), 401
 
 
+#这个api看起来没什么用
 @app.route('/api/v1/images', methods=['GET'])
 @jwt_required()
 def get_user_images():
@@ -468,7 +471,7 @@ def get_user_images():
         } for image in images]
     })
 
-
+#这个api也没用
 @app.route('/api/v1/images/<int:image_id>', methods=['GET'])
 @jwt_required()
 def get_image(image_id):
@@ -484,13 +487,32 @@ def get_image(image_id):
 
     return jsonify({
         'id': image.id,
-        'path': image.path,
+        'filename': image.filename,
         'prompt': image.prompt,
         'negative_prompt': image.negative_prompt,
-        'created_at': image.created_at.isoformat(),
-        'image_data': image_data
+        'created_at': image.created_at.isoformat()
     })
 
+@app.route('/api/v1/images/user/<int:user_id>', methods=['GET'])
+@jwt_required()
+def get_users_images(user_id):
+    """Get all images for a specific user"""
+    user = get_current_user()
+    image_exists = OutputImage.query.filter_by(user_id=user.id).first()
+    if not image_exists:
+        return jsonify({'images': []})
+    images = OutputImage.query.filter_by(user_id=user.id).order_by(OutputImage.created_at.desc()).all()
+    print(images)
+    return jsonify({
+        'images': [{
+            'user_id': image.user_id,
+            'id': image.id,
+            'path': image.path,
+            'prompt': image.prompt,
+            'created_at': image.created_at.isoformat(), 
+        } for image in images]
+    })
+    
 
 @app.route('/api/v1/images/<int:image_id>', methods=['DELETE'])
 @jwt_required()
@@ -514,6 +536,11 @@ def delete_image(image_id):
 
     return jsonify({'message': 'Image deleted successfully'})
 
+
+# Add this route to serve static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('outputs/t2i', filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
