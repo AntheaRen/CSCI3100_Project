@@ -18,4 +18,5 @@ class OutputImage(db.Model):
     @property
     def path(self):
         """Get the full path to the image file"""
-        return os.path.join('outputs', 't2i', f'user_{self.user_id}', f'image_{self.id}.png')
+        from config import Config
+        return os.path.join(Config.BASEDIR, 'outputs', 't2i', f'user_{self.user_id}', f'image_{self.id}.png')
