@@ -1,20 +1,36 @@
 import torch
 import time
 import os
+from abc import ABC, abstractmethod
 from PIL import Image
 from typing import List, Union
 from torchvision import transforms
 from spandrel import ImageModelDescriptor, ModelLoader
+from . import logging
 
 
-class Upscaler(object):
-    def __init__(self, model: ImageModelDescriptor, verbose: bool = True):
+class Upscaler(ABC):
+    @abstractmethod
+    def upscale(self, images: Union[Image.Image, List[Image.Image]]) -> List[Image.Image]:
+        """
+        Upscale the input images.
+
+        Args:
+            images (Union[Image.Image, List[Image.Image]]): The input image(s) to be upscaled.
+
+        Returns:
+            List[Image.Image]: The upscaled image(s).
+        """
+        pass
+
+
+class ESRGANUpscaler(Upscaler):
+    def __init__(self, model: ImageModelDescriptor):
         if not isinstance(model, ImageModelDescriptor):
             raise ValueError(f"model must be an instance of {ImageModelDescriptor.__name__}, not {type(model).__name__}")
 
         self.model = model
         self.transforms = transforms.ToTensor()
-        self.verbose = verbose
 
     @property
     def device(self):
@@ -29,20 +45,19 @@ class Upscaler(object):
         cls,
         pretrained_model_name_or_path: str,
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-        verbose: bool = True
     ):
         if not os.path.isfile(pretrained_model_name_or_path):
             raise FileNotFoundError(f"file not found: {pretrained_model_name_or_path}")
-        print(f"Loading model from {pretrained_model_name_or_path}", disable=not verbose)
+        logging.info(f"Loading model from {pretrained_model_name_or_path}")
         tic = time.time()
         model = ModelLoader().load_from_file(pretrained_model_name_or_path)
-        print(f"Loaded model in {time.time() - tic:'.2f'} seconds", disable=not verbose)
+        logging.info(f"Loaded model in {time.time() - tic:'.2f'} seconds")
 
         model.to(device)
         model.eval()
         return cls(model)
 
-    def __call__(
+    def upscale(
         self,
         images: Union[Image.Image, List[Image.Image]],
     ) -> List[Image.Image]:
@@ -59,4 +74,4 @@ class Upscaler(object):
         return outputs
 
 
-upscaler: Upscaler = None
+upscaler: ESRGANUpscaler = None

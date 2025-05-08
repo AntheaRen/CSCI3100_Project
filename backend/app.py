@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from modules import sd
+from modules import sd, webui
 from modules.database import db
 from modules.user import User
 from modules.image import OutputImage
+from modules.api import ArtifyAPI
+from modules.webui import WebUI
+from modules.sd import LocalStableDiffusionXLPipeline
+from modules.upscaler import ESRGANUpscaler
 from modules import logging
 from config import Config
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -18,6 +22,7 @@ import random
 from typing import List
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+
 app = Flask(__name__, static_folder='static', static_url_path="")
 
 
@@ -41,6 +46,7 @@ app = Flask(__name__, static_folder='static', static_url_path="")
 # def serve_any_path(subpath):
 #     return send_from_directory("static", "index.html")
 
+### Basic Configuration ###
 
 app.config.from_object(Config)
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
@@ -69,6 +75,8 @@ jwt_blocklist = set()
 def get_current_user():
     logging.info(f"Current user JWT identity: {get_jwt_identity()}")
     return User.query.filter_by(username=get_jwt_identity()).first()
+
+### Login and Registration ###
 
 
 @app.route('/api/v1/register', methods=['POST'])
@@ -141,6 +149,8 @@ def logout():
     jti = get_jwt()["jti"]  # Get the unique identifier of the JWT token
     jwt_blocklist.add(jti)  # Add the token to blocklist
     return jsonify({'message': 'Logged out successfully'}), 200
+
+### User Management ###
 
 
 @app.route('/api/v1/users', methods=['GET'])
@@ -258,41 +268,26 @@ def test():
 def check_if_token_in_blocklist(jwt_header, jwt_payload):
     return jwt_payload["jti"] in jwt_blocklist
 
+### API Endpoints ###
 
-# @celery.task
-# def t2i_inference(
-#     pipeline,
-#     prompt: str,
-#     negative_prompt: str,
-#     width: int,
-#     height: int,
-#     batch_size: int,
-#     batch_count: int,
-#     guidance_scale: float,
-#     num_inference_steps: int,
-#     seed: int,
-# ):
-#     return pipeline.generate(
-#         prompt=prompt,
-#         negative_prompt=negative_prompt,
-#         width=width,
-#         height=height,
-#         batch_size=batch_size,
-#         batch_count=batch_count,
-#         guidance_scale=guidance_scale,
-#         num_inference_steps=num_inference_steps,
-#         seed=seed
-#     )
 
-def init_sd_api():
-    if sd.api is None:
-        sd.api = sd.WebUIAPI(
-            host='connect.yza1.seetacloud.com',
-            port=12007,
+api = None
+
+
+def init_api():
+    global api
+    if api is None:
+        webui = WebUI.from_ssh(
+            host='connect.bjb1.seetacloud.com',
+            port=16326,
             username='root',
-            password='vs6lNM5wi0aq',
+            password='h4/3kSGZJkR1',
         )
-    return sd.api
+        api = ArtifyAPI(
+            image_generator=webui,
+            upscaler=webui,
+        )
+    return api
 
 
 @app.route('/api/v1/t2i', methods=['POST'])
@@ -327,14 +322,14 @@ def t2i():
         user.credits = left_credits - required_credits
         db.session.commit()
 
-        init_sd_api()
+        init_api()
 
         # Generate images
         if settings.get('seed'):
             seed = int(settings['seed'])
         else:
             seed = random.randint(0, 2**32 - 1)
-        images: List[Image.Image] = sd.api.txt2img(
+        images: List[Image.Image] = api.txt2img(
             prompt=data.get('prompt'),
             negative_prompt=data.get('negativePrompt'),
             width=int(settings.get('width', 512)),
@@ -364,10 +359,10 @@ def t2i():
 
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(output_image.path), exist_ok=True)
-            
+
             # Save image file
             image.save(output_image.path)
-            
+
             # Convert to base64 for response
             with open(output_image.path, 'rb') as f:
                 image_data.append(base64.b64encode(f.read()).decode())
@@ -418,7 +413,7 @@ def upscale():
         # img_str = base64.b64encode(buffered.getvalue()).decode()
         # return jsonify({'image': img_str})
 
-        init_sd_api()
+        init_api()
 
         data = request.get_json()
         settings = data.get('settings', {})
@@ -428,7 +423,7 @@ def upscale():
         input_image = Image.open(io.BytesIO(base64.b64decode(input_image_data))).convert("RGB")
 
         # Upscale image
-        image = sd.api.upscale(
+        image = api.upscale(
             image=input_image,
             ratio=ratio,
         )
@@ -453,8 +448,9 @@ def verify_token():
     except:
         return jsonify({'valid': False}), 401
 
+### User Image Management ###
 
-#这个api看起来没什么用
+
 @app.route('/api/v1/images', methods=['GET'])
 @jwt_required()
 def get_user_images():
@@ -471,7 +467,7 @@ def get_user_images():
         } for image in images]
     })
 
-#这个api也没用
+
 @app.route('/api/v1/images/<int:image_id>', methods=['GET'])
 @jwt_required()
 def get_image(image_id):
@@ -493,6 +489,7 @@ def get_image(image_id):
         'created_at': image.created_at.isoformat()
     })
 
+
 @app.route('/api/v1/images/user/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_users_images(user_id):
@@ -509,10 +506,10 @@ def get_users_images(user_id):
             'id': image.id,
             'path': image.path,
             'prompt': image.prompt,
-            'created_at': image.created_at.isoformat(), 
+            'created_at': image.created_at.isoformat(),
         } for image in images]
     })
-    
+
 
 @app.route('/api/v1/images/<int:image_id>', methods=['DELETE'])
 @jwt_required()
@@ -541,6 +538,9 @@ def delete_image(image_id):
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('outputs/t2i', filename)
+
+
+### Launch the Flask app ###
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
