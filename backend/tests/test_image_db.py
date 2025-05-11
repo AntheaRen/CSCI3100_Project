@@ -12,16 +12,22 @@ import os
 
 def test_image_storage():
     with app.app_context():
-        # Get test user
+        db.create_all()
+        # Create test user
+        user = User(username='testuser', credits=10)
+        user.set_password('test123')
+        db.session.add(user)
+        db.session.commit()
+
+        # Now fetch the user
         user = User.query.filter_by(username='testuser').first()
-        
+
         # Create test image
         test_image = Image.new('RGB', (100, 100), color='red')
         
         # Create image record
         output_image = OutputImage(
             user_id=user.id,
-            filename='test_image.png',
             prompt='Test prompt',
             negative_prompt='Test negative prompt'
         )

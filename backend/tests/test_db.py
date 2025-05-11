@@ -10,6 +10,7 @@ from modules.user import User
 
 def test_db_operations():
     with app.app_context():
+        db.create_all()
         # Create user
         def create_user(username, password):
             user = User(username=username)

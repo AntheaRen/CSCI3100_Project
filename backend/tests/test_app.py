@@ -189,7 +189,6 @@ def test_user_images(client):
         user = User.query.filter_by(username='testuser').first()
         output_image = OutputImage(
             user_id=user.id,
-            filename='test_image.png',
             created_at=datetime.now(),
             prompt='test prompt',
             negative_prompt='test negative'
