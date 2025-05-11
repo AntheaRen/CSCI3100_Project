@@ -9,14 +9,17 @@ export default function ImageGenerator() {
         samplingSteps: 32,
         width: 832,
         height: 1216,
-        batchCount: 1,  // 初始值更改为 1 保证安全
+        batchCount: 1,
         batchSize: 1,
         cfgScale: 1.2,
-        seed: ''
+        seed: '',
+        sampler: 'Euler Ancestral CFG++'
     });
     const [generatedImages, setGeneratedImages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
     const getAuthHeader = () => {
         const token = localStorage.getItem('jwtToken');
@@ -35,6 +38,7 @@ export default function ImageGenerator() {
                 negativePrompt,
                 settings: {
                     ...settings,
+                    sampler: settings.sampler,
                     samplingSteps: Number(settings.samplingSteps),
                     width: Number(settings.width),
                     height: Number(settings.height),
@@ -112,6 +116,27 @@ export default function ImageGenerator() {
                 </div>
 
                 <div className="settings-section">
+                    <div className="setting-group">
+                        <label>Sampler</label>
+                        <select
+                            value={settings.sampler}
+                            onChange={(e) => handleSettingChange('sampler', e.target.value)}
+                            className="style-select"
+                        >
+                            {[
+                                "DPM++ SDE",
+                                "DPM++ 2M",
+                                "Euler",
+                                "Euler a",
+                                "Euler Ancestral CFG++",
+                            ].map((sampler) => (
+                                <option key={sampler} value={sampler}>
+                                    {sampler}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="setting-group">
                         <label>Sampling Steps</label>
                         <div className="setting-control">
@@ -237,16 +262,6 @@ export default function ImageGenerator() {
                     <button onClick={handleGenerate} className="generate-button">
                         Generate
                     </button>
-                    <div className="style-selectors">
-                        <select className="style-select">
-                            <option value="none">None</option>
-                            {/* Add more style options here */}
-                        </select>
-                        <select className="style-select">
-                            <option value="none">None</option>
-                            {/* Add more style options here */}
-                        </select>
-                    </div>
                 </div>
 
                 <div className="image-preview">
@@ -256,14 +271,30 @@ export default function ImageGenerator() {
                             <p>Generating...</p>
                         </div>
                     ) : generatedImages.length > 0 ? (
-                        generatedImages.map((base64Data, index) => (
+                        <div className="gallery-container">
+                            {/* 主展示区域 */}
                             <img
-                                key={index}
-                                src={`data:image/png;base64,${base64Data}`}
-                                alt={`Generated ${index + 1}`}
-                                className="generated-image"
+                                src={`data:image/png;base64,${generatedImages[selectedImageIndex]}`}
+                                alt={`Generated ${selectedImageIndex + 1}`}
+                                className="main-image"
                             />
-                        ))
+
+                            {/* 缩略图导航 */}
+                            <div className="thumbnail-strip">
+                                {generatedImages.map((base64Data, index) => (
+                                    <div
+                                        key={index}
+                                        className={`thumbnail-item ${index === selectedImageIndex ? 'active' : ''}`}
+                                        onClick={() => setSelectedImageIndex(index)}
+                                    >
+                                        <img
+                                            src={`data:image/png;base64,${base64Data}`}
+                                            alt={`Thumbnail ${index + 1}`}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     ) : (
                         <div className="placeholder">No images generated yet</div>
                     )}
