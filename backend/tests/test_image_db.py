@@ -1,3 +1,9 @@
+import os
+import sys
+import pytest
+# Add the parent directory to sys.path so Python can find the app module
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from app import app, db
 from modules.user import User
 from modules.image import OutputImage
@@ -38,3 +44,5 @@ def test_image_storage():
 
 if __name__ == '__main__':
     test_image_storage() 
+
+#pytest tests/test_image_db.py -v

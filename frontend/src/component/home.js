@@ -3,20 +3,48 @@ import '../css/home.css';
 
 export default function Home() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    const credits = currentUser?.credits ?? 0; // Use nullish coalescing for default value
-
+    
+    // Add state for user data including credits
+    const [userData, setUserData] = useState({
+        username: currentUser?.username || '',
+        credits: currentUser?.credits || 0
+    });
+    
     // Add state for gallery count
     const [galleryCount, setGalleryCount] = useState(0);
+    // Add state for generated images count (for future implementation)
+    const [generatedCount, setGeneratedCount] = useState(0);
 
     useEffect(() => {
-        async function fetchGalleryCount() {
+        async function fetchUserData() {
+            if (!currentUser) return;
+            
             try {
-                // Log the currentUser object
-                //console.log('currentUser:', currentUser);
-    
-                // Log the token being used
-                //console.log('Token used:', currentUser?.token);
-    
+                // Fetch the latest user data including credits
+                const response = await fetch(`http://localhost:5000/api/v1/users/${currentUser.username}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser?.token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+
+                const data = await response.json();
+                setUserData({
+                    username: data.username,
+                    credits: data.credits
+                });
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            }
+        }
+        
+        async function fetchGalleryCount() {
+            if (!currentUser) return;
+            
+            try {
                 const response = await fetch('http://localhost:5000/api/v1/gallery/count', {
                     headers: {
                         'Authorization': `Bearer ${currentUser?.token}`
@@ -31,7 +59,6 @@ export default function Home() {
                 }
 
                 const data = await response.json();
-    
                 setGalleryCount(data.count);
             } catch (error) {
                 console.error('Error fetching gallery count:', error);
@@ -40,21 +67,22 @@ export default function Home() {
         }
     
         if (currentUser) {
+            fetchUserData();
             fetchGalleryCount();
         }
     }, [currentUser]);
 
     return (
         <div className="home-container">
-            <h1>Welcome, {currentUser?.username}!</h1>
+            <h1>Welcome, {userData.username}!</h1>
             <div className="dashboard">
                 <div className="stats-card">
                     <h3>Your Credits</h3>
-                    <p>{credits}</p>
+                    <p>{userData.credits}</p>
                 </div>
                 <div className="stats-card">
                     <h3>Generated Images</h3>
-                    <p>0</p>
+                    <p>{generatedCount}</p>
                 </div>
                 <div className="stats-card">
                     <h3>Gallery Items</h3>

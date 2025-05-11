@@ -6,6 +6,11 @@ import '../css/navBar.css';
 export default function NavBar() {
     const navigate = useNavigate();
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    // Return null if no user is logged in
+    if (!currentUser) {
+        return null;
+    }
 
     const handleLogout = async () => {
         try {

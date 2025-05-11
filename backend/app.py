@@ -72,7 +72,7 @@ with app.app_context():
 # Add this near your other app configurations
 jwt_blocklist = set()
 
-
+@jwt_required()
 def get_current_user():
     logging.info(f"Current user JWT identity: {get_jwt_identity()}")
     return User.query.filter_by(username=get_jwt_identity()).first()

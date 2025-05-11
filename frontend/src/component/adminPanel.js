@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../css/adminPanel.css';
+import { useLocation } from 'react-router-dom';
 
 export default function AdminPanel() {
     const [users, setUsers] = useState([]);
@@ -19,10 +20,13 @@ export default function AdminPanel() {
         credits: 0
     });
 
-    // Fetch users on component mount
+    // Get location object to detect navigation
+    const location = useLocation();
+    
+    // Fetch users on component mount and when navigating back to this page
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [location]);
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     const fetchUsers = async () => {
         try {
@@ -187,8 +191,9 @@ export default function AdminPanel() {
                     <div className="modal-content">
                         <h2>Create New User</h2>
                         <div className="form-group">
-                            <label>Username:</label>
+                            <label htmlFor="create-username">Username:</label>
                             <input
+                                id="create-username"
                                 type="text"
                                 value={createForm.username}
                                 onChange={(e) => setCreateForm({
@@ -199,8 +204,9 @@ export default function AdminPanel() {
                             />
                         </div>
                         <div className="form-group">
-                            <label>Password:</label>
+                            <label htmlFor="create-password">Password:</label>
                             <input
+                                id="create-password"
                                 type="password"
                                 value={createForm.password}
                                 onChange={(e) => setCreateForm({
@@ -211,8 +217,9 @@ export default function AdminPanel() {
                             />
                         </div>
                         <div className="form-group">
-                            <label>Credits:</label>
+                            <label htmlFor="create-credits">Credits:</label>
                             <input
+                                id="create-credits"
                                 type="number"
                                 min="0"
                                 value={createForm.credits}
@@ -260,8 +267,9 @@ export default function AdminPanel() {
                     <div className="modal-content">
                         <h2>Edit User: {editingUser.username}</h2>
                         <div className="form-group">
-                            <label>Username:</label>
+                            <label htmlFor="edit-username">Username:</label>
                             <input
+                                id="edit-username"
                                 type="text"
                                 value={editForm.username}
                                 onChange={(e) => setEditForm({
@@ -271,8 +279,9 @@ export default function AdminPanel() {
                             />
                         </div>
                         <div className="form-group">
-                            <label>New Password (leave blank to keep current):</label>
+                            <label htmlFor="edit-password">New Password (leave blank to keep current):</label>
                             <input
+                                id="edit-password"
                                 type="password"
                                 value={editForm.password}
                                 onChange={(e) => setEditForm({
@@ -283,8 +292,9 @@ export default function AdminPanel() {
                             />
                         </div>
                         <div className="form-group">
-                            <label>Credits:</label>
+                            <label htmlFor="edit-credits">Credits:</label>
                             <input
+                                id="edit-credits"
                                 type="number"
                                 min="0"
                                 value={editForm.credits}

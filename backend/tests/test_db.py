@@ -1,3 +1,9 @@
+import os
+import sys
+import pytest
+# Add the parent directory to sys.path so Python can find the app module
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from app import app, db
 from modules.user import User
 
@@ -5,8 +11,8 @@ from modules.user import User
 def test_db_operations():
     with app.app_context():
         # Create user
-        def create_user(username, email, password):
-            user = User(username=username, email=email)
+        def create_user(username, password):
+            user = User(username=username)
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
@@ -36,7 +42,7 @@ def test_db_operations():
                 print(f"Deleted user: {username}")
 
         # Test operations
-        create_user("testuser1", "test1@example.com", "password123")
+        create_user("testuser1", "password123")
         get_user("testuser1")
         update_credits("testuser1", 50)
         delete_user("testuser1")
@@ -44,3 +50,5 @@ def test_db_operations():
 
 if __name__ == '__main__':
     test_db_operations()
+
+#pytest tests/test_db.py -v
