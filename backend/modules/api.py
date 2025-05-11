@@ -54,4 +54,5 @@ class ArtifyAPI(object):
         image: Image.Image,
         ratio: float = 2.0,
     ):
+        logging.info(f"Upscaling images using {self.upscaler.__class__.__name__}...")
         return self.upscaler.upscale(image, ratio=ratio)

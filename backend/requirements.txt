@@ -14,3 +14,4 @@ spandrel
 huggingface-hub
 sshtunnel
 webuiapi
+accelerate

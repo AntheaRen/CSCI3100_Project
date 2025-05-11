@@ -14,6 +14,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from datetime import timedelta
 import os
 import base64
+import json
 import io
 import traceback
 from PIL import Image
@@ -272,16 +273,20 @@ def check_if_token_in_blocklist(jwt_header, jwt_payload):
 
 
 api = None
+ssh_file = 'ssh.json'
 
 
 def init_api():
     global api
     if api is None:
+        with open(ssh_file, 'r') as f:
+            logging.info(f"Loading SSH config from {ssh_file}")
+            ssh_config = json.load(f)
         webui = WebUI.from_ssh(
-            host='connect.bjb1.seetacloud.com',
-            port=16326,
-            username='root',
-            password='h4/3kSGZJkR1',
+            host=ssh_config['host'],
+            port=ssh_config['port'],
+            username=ssh_config['username'],
+            password=ssh_config['password'],
         )
         api = ArtifyAPI(
             image_generator=webui,
@@ -319,9 +324,6 @@ def t2i():
         if left_credits < required_credits:
             return jsonify({'error': 'Insufficient credits'}), 402
 
-        user.credits = left_credits - required_credits
-        db.session.commit()
-
         init_api()
 
         # Generate images
@@ -338,17 +340,18 @@ def t2i():
             batch_count=batch_count,
             guidance_scale=float(settings.get('cfgScale', 7.0)),
             num_inference_steps=int(settings.get('samplingSteps', 20)),
+            sampler=settings.get('sampler', 'Euler Ancestral CFG++'),
             seed=seed
         )
 
         # Save images and store in database
         image_data = []
         image_ids = []
-        for i, image in enumerate(images):
+        for image in images:
             # Create database entry
             output_image = OutputImage(
                 user_id=user.id,
-                filename=f'image_{i}.png',  # Add filename
+                # filename=f'image_{idx}.png',  # Add filename
                 created_at=datetime.now(),
                 prompt=data.get('prompt'),
                 negative_prompt=data.get('negativePrompt')
@@ -367,6 +370,9 @@ def t2i():
             with open(output_image.path, 'rb') as f:
                 image_data.append(base64.b64encode(f.read()).decode())
             image_ids.append(output_image.id)  # Now id will be available
+
+        user.credits = left_credits - required_credits
+        db.session.commit()
 
         return jsonify({
             'images': image_data,
@@ -483,7 +489,7 @@ def get_image(image_id):
 
     return jsonify({
         'id': image.id,
-        'filename': image.filename,
+        'filename': os.path.basename(image.path),
         'prompt': image.prompt,
         'negative_prompt': image.negative_prompt,
         'created_at': image.created_at.isoformat()
@@ -540,6 +546,8 @@ def serve_static(filename):
     return send_from_directory('outputs/t2i', filename)
 
 # new
+
+
 @app.route('/api/v1/gallery/count', methods=['GET'])
 @jwt_required()
 def gallery_count():
@@ -548,6 +556,7 @@ def gallery_count():
     return jsonify({'count': count})
 
 ### Launch the Flask app ###
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

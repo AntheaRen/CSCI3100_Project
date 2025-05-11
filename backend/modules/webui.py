@@ -36,11 +36,14 @@ class WebUI(sd.ImageGenerator, upscaler.Upscaler):
             set_keepalive=60,
         )
 
-        tunnel.start()
-        assert tunnel.is_active, f"SSH tunnel is not active."
-        logging.info(f"SSH tunnel is active. Local port: {tunnel.local_bind_port}")
-        logging.info(f"Connecting to WebUI API at {host}:{port}...")
+        if tunnel.is_active:
+            logging.info(f"SSH tunnel is already active. Local port: {tunnel.local_bind_port}")
+        else:
+            tunnel.start()
+            assert tunnel.is_active, f"SSH tunnel is not active."
+            logging.info(f"SSH tunnel is active. Local port: {tunnel.local_bind_port}")
 
+        logging.info(f"Connecting to WebUI API at {host}:{port}...")
         api = webuiapi.WebUIApi(host='127.0.0.1', port=6006)
 
         # assert self.api.is_alive(), f"WebUI API is not alive."
