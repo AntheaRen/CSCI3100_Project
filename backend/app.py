@@ -539,6 +539,13 @@ def delete_image(image_id):
 def serve_static(filename):
     return send_from_directory('outputs/t2i', filename)
 
+# new
+@app.route('/api/v1/gallery/count', methods=['GET'])
+@jwt_required()
+def gallery_count():
+    user = get_current_user()
+    count = OutputImage.query.filter_by(user_id=user.id).count()
+    return jsonify({'count': count})
 
 ### Launch the Flask app ###
 
