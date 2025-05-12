@@ -3,13 +3,13 @@ import '../css/home.css';
 
 export default function Home() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    
+
     // Add state for user data including credits
     const [userData, setUserData] = useState({
         username: currentUser?.username || '',
         credits: currentUser?.credits || 0
     });
-    
+
     // Add state for gallery count
     const [galleryCount, setGalleryCount] = useState(0);
     // Add state for generated images count (for future implementation)
@@ -18,7 +18,7 @@ export default function Home() {
     useEffect(() => {
         async function fetchUserData() {
             if (!currentUser) return;
-            
+
             try {
                 // Fetch the latest user data including credits
                 const response = await fetch(`http://localhost:5000/api/v1/users/${currentUser.username}`, {
@@ -40,10 +40,10 @@ export default function Home() {
                 console.error('Error fetching user data:', error);
             }
         }
-        
+
         async function fetchGalleryCount() {
             if (!currentUser) return;
-            
+
             try {
                 const response = await fetch('http://localhost:5000/api/v1/gallery/count', {
                     headers: {
@@ -65,7 +65,7 @@ export default function Home() {
                 setGalleryCount(0);
             }
         }
-    
+
         if (currentUser) {
             fetchUserData();
             fetchGalleryCount();
