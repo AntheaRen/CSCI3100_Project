@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+# from flask_migrate import Migrate
 from flask_cors import CORS
 from modules import sd, webui
 from modules.database import db
@@ -71,6 +72,7 @@ with app.app_context():
 # Add this near your other app configurations
 jwt_blocklist = set()
 
+
 @jwt_required()
 def get_current_user():
     logging.info(f"Current user JWT identity: {get_jwt_identity()}")
@@ -104,7 +106,8 @@ def register():
             username=data['username'],
             # email=data['email'],
             credits=data.get('credits', 10),  # Default to 10 if not specified
-            is_admin=0
+            is_admin=0,
+            generated_images_count=0
         )
         user.set_password(data['password'])
 
@@ -171,7 +174,8 @@ def get_user(username):
             'username': user.username,
             # 'email': user.email,
             'credits': user.credits,
-            'is_admin': user.is_admin
+            'is_admin': user.is_admin,
+            'generated_images_count': user.generated_images_count  # New field
         })
     return jsonify({'error': 'User not found'}), 404
 
@@ -371,6 +375,7 @@ def t2i():
             image_ids.append(output_image.id)  # Now id will be available
 
         user.credits = left_credits - required_credits
+        user.generated_images_count += batch_size * batch_count  # Increment the count
         db.session.commit()
 
         return jsonify({
@@ -509,7 +514,7 @@ def get_users_images(user_id):
         'images': [{
             'user_id': image.user_id,
             'id': image.id,
-            #'path': image.path,
+            # 'path': image.path,
             'prompt': image.prompt,
             'created_at': image.created_at.isoformat(),
         } for image in images]

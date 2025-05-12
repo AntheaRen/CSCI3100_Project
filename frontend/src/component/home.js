@@ -7,7 +7,8 @@ export default function Home() {
     // Add state for user data including credits
     const [userData, setUserData] = useState({
         username: currentUser?.username || '',
-        credits: currentUser?.credits || 0
+        credits: currentUser?.credits || 0,
+        generated_images_count: 0
     });
 
     // Add state for gallery count
@@ -34,7 +35,8 @@ export default function Home() {
                 const data = await response.json();
                 setUserData({
                     username: data.username,
-                    credits: data.credits
+                    credits: data.credits,
+                    generated_images_count: data.generated_images_count
                 });
             } catch (error) {
                 console.error('Error fetching user data:', error);
@@ -82,7 +84,7 @@ export default function Home() {
                 </div>
                 <div className="stats-card">
                     <h3>Generated Images</h3>
-                    <p>{generatedCount}</p>
+                    <p>{userData.generated_images_count}</p>
                 </div>
                 <div className="stats-card">
                     <h3>Gallery Items</h3>

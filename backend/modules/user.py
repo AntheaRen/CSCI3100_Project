@@ -11,6 +11,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128))
     credits = db.Column(db.Integer, default=10)
     is_admin = db.Column(db.Boolean, default=False)
+    generated_images_count = db.Column(db.Integer, default=0)  # New field
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
