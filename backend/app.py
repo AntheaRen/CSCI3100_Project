@@ -52,7 +52,6 @@ app = Flask(__name__, static_folder='static', static_url_path="")
 app.config.from_object(Config)
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 
-# Remove all CORS configurations and use the simplest possible one
 CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:3000"],
@@ -510,7 +509,7 @@ def get_users_images(user_id):
         'images': [{
             'user_id': image.user_id,
             'id': image.id,
-            'path': image.path,
+            #'path': image.path,
             'prompt': image.prompt,
             'created_at': image.created_at.isoformat(),
         } for image in images]

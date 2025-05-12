@@ -17,6 +17,7 @@ import axios from 'axios';
 // Helper component for protected routes
 const ProtectedRoute = ({ children }) => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const [isValid, setIsValid] = useState(true);
     console.log('Protected Route - Current User:', currentUser);
 
     useEffect(() => {
@@ -29,21 +30,27 @@ const ProtectedRoute = ({ children }) => {
                 });
                 if (!response.data.valid) {
                     localStorage.clear();
-                    window.location.href = '/login';
+                    setIsValid(false);
                 }
             } catch (error) {
+                console.error("Token verification failed:", error);
                 localStorage.clear();
-                window.location.href = '/login';
+                setIsValid(false);
             }
         };
 
         if (currentUser?.token) {
             verifyToken();
+            
+            // Set up interval to periodically check token validity
+            const intervalId = setInterval(verifyToken, 5 * 60 * 1000); // Check every 5 minutes
+            
+            return () => clearInterval(intervalId); // Clean up interval on unmount
         }
-    }, []);
+    }, [currentUser]);
 
-    if (!currentUser) {
-        console.log('No user found, redirecting to login');
+    if (!currentUser || !isValid) {
+        console.log('No valid user found, redirecting to login');
         return <Navigate to="/login" replace />;
     }
 
