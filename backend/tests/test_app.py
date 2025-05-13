@@ -222,6 +222,50 @@ def test_user_images(client):
         image = OutputImage.query.get(image_id)
         assert image is None
 
+
+
+
+def test_generate_image_increments_count(client):
+    token = get_auth_token(client, 'testuser', 'test123')
+    
+    # Create a mock API
+    mock_api = MockAPI()
+    
+    # Patch both the global api variable and init_api function
+    with unittest.mock.patch('app.api', mock_api), \
+         unittest.mock.patch('app.init_api', return_value=mock_api):
+        
+        with app.app_context():
+            user = User.query.filter_by(username='testuser').first()
+            before_count = user.generated_images_count
+
+        data = {
+            "prompt": "A red square",
+            "negativePrompt": "",
+            "settings": {
+                "batchSize": 1,
+                "batchCount": 1,
+                "width": 64,
+                "height": 64,
+                "cfgScale": 7.0,
+                "samplingSteps": 20,
+                "sampler": "Euler Ancestral CFG++"
+            }
+        }
+
+        response = client.post(
+            '/api/v1/t2i',
+            json=data,
+            headers={'Authorization': f'Bearer {token}'}
+        )
+        assert response.status_code == 200
+
+        with app.app_context():
+            user = User.query.filter_by(username='testuser').first()
+            after_count = user.generated_images_count
+
+        assert after_count == before_count + 1
+
 if __name__ == '__main__':
     pytest.main(['-xvs', __file__])
 

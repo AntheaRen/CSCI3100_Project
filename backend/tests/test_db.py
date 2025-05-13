@@ -44,7 +44,9 @@ def test_db_operations():
 
         # Test operations
         create_user("testuser1", "password123")
-        get_user("testuser1")
+        user = get_user("testuser1")
+        assert user.generated_images_count == 0, "generated_images_count should be initialized to 0"
+        print(f"generated_images_count for {user.username}: {user.generated_images_count}")
         update_credits("testuser1", 50)
         delete_user("testuser1")
 
